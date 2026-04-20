@@ -5,54 +5,68 @@ const movieModel = require('./movie-model.js');
 
 const app = express();
 
-// Parse urlencoded bodies
-app.use(bodyParser.json()); 
-
-// Serve static content in directory 'files'
+// Middleware
+app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'files')));
 
-/* Task 1.2: Add a GET /genres endpoint:
-   This endpoint returns a sorted array of all the genres of the movies
-   that are currently in the movie model.
-*/
 
-/* Task 1.4: Extend the GET /movies endpoint:
-   When a query parameter for a specific genre is given, 
-   return only movies that have the given genre
- */
+// ✅ GET GENRES
+app.get('/genres', function (req, res) {
+  const movies = Object.values(movieModel);
+
+  const genresSet = new Set();
+
+  movies.forEach(movie => {
+    movie.Genres.forEach(g => genresSet.add(g));
+  });
+
+  const genres = Array.from(genresSet).sort();
+
+  res.json(genres);
+});
+
+
+// ✅ GET ALL / FILTER BY GENRE
 app.get('/movies', function (req, res) {
-  let movies = Object.values(movieModel)
-  res.send(movies);
-})
+  let movies = Object.values(movieModel);
 
-// Configure a 'get' endpoint for a specific movie
+  const genre = req.query.genre;
+
+  if (genre) {
+    movies = movies.filter(m => m.Genres.includes(genre));
+  }
+
+  res.json(movies);
+});
+
+
+// ✅ GET ONE
 app.get('/movies/:imdbID', function (req, res) {
-  const id = req.params.imdbID
-  const exists = id in movieModel
- 
-  if (exists) {
-    res.send(movieModel[id])
+  const movie = movieModel[req.params.imdbID];
+
+  if (movie) {
+    res.json(movie);
   } else {
-    res.sendStatus(404)    
+    res.sendStatus(404);
   }
-})
+});
 
-app.put('/movies/:imdbID', function(req, res) {
 
-  const id = req.params.imdbID
-  const exists = id in movieModel
+// ✅ PUT (UPDATE / CREATE)
+app.put('/movies/:imdbID', function (req, res) {
+  const imdbID = req.params.imdbID;
+  const movie = req.body;
 
-  movieModel[req.params.imdbID] = req.body;
-  
-  if (!exists) {
-    res.status(201)
-    res.send(req.body)
+  if (movieModel[imdbID]) {
+    movieModel[imdbID] = movie;
+    res.sendStatus(200);
   } else {
-    res.sendStatus(200)
+    movieModel[imdbID] = movie;
+    res.status(201).json(movie);
   }
-  
-})
+});
 
-app.listen(3000)
 
-console.log("Server now listening on http://localhost:3000/")
+// START SERVER
+app.listen(3000);
+console.log("Server now listening on http://localhost:3000/");
